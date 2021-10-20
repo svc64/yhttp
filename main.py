@@ -103,10 +103,10 @@ def main():
                         mime_type = DEFAULT_MIME_TYPE
             except PermissionError:
                 resp_code = ERROR_403
-                resp_body = ERROR_403.encode()
+                resp_body = resp_code.encode()
             except FileNotFoundError:
                 resp_code = ERROR_404
-                resp_body = ERROR_404.encode()
+                resp_body = resp_code.encode()
 
             resp = {"resp_code": resp_code, "headers": {"Content-Length": len(resp_body),
                                                         "Content-Type": mime_type,
