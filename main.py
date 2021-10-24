@@ -76,7 +76,7 @@ def main():
 
         def serve(sock):
             print("serving")
-            req = parse_http_req(get_http_req(client_socket))
+            req = parse_http_req(get_http_req(sock))
             print(req)
             req_path = req["path"]
             if req_path == "/":
@@ -110,12 +110,12 @@ def main():
 
             resp = {"resp_code": resp_code, "headers": {"Content-Length": len(resp_body),
                                                         "Content-Type": mime_type,
-                                                        "Server": "lol"}, "body": resp_body}
+                                                        "Server": "lol"}}
             print(resp)
+            resp["body"] = resp_body
             resp_data = build_http_resp(resp)
-            print(resp_data)
-            client_socket.send(resp_data)
-            client_socket.close()
+            sock.send(resp_data)
+            sock.close()
 
         thread = Thread(target=serve, args=(client_socket,))
         thread.start()
