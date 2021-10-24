@@ -7,7 +7,7 @@ ERROR_403 = "403 Forbidden"
 ERROR_404 = "404 Not Found"
 DEFAULT_MIME_TYPE = "application/octet-stream"
 
-ext_type_dict = {"html": "text/html"}
+ext_type_dict = {"html": "text/html", "js": "text/javascript; charset=UTF-8", "css": "text/css"}
 image_types = ["png", "jpg", "jpeg"]
 
 
