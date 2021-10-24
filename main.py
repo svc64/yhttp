@@ -1,10 +1,14 @@
 import socket
 from threading import Thread
 from os import path
+from urllib.parse import urlparse
+from urllib.parse import parse_qs
 
 WEBSITE_DIR = "website"
 ERROR_403 = "403 Forbidden"
 ERROR_404 = "404 Not Found"
+RESP_OK = "200 OK"
+PLAINTEXT_MIME_TYPE = "text/plain"
 DEFAULT_MIME_TYPE = "application/octet-stream"
 
 ext_type_dict = {"html": "text/html", "js": "text/javascript; charset=UTF-8", "css": "text/css"}
@@ -81,38 +85,48 @@ def main():
             req_path = req["path"]
             if req_path == "/":
                 req_path = "/index.html"
-            web_file = path.join(WEBSITE_DIR, req_path.strip("/"))
-            print(web_file)
-            resp_code = "200 OK"
-            mime_type = "text/plain"
-            try:
-                fd = open(web_file, "rb")
-                resp_body = fd.read()
-                fd.close()
-                file_ext = req_path.rsplit(".", 1)[1]
+            if req_path.startswith("/calculate-next"):
+                parsed_url = urlparse(req_path)
+                num_str = parse_qs(parsed_url.query)['num'][0]
+                num = int(num_str)
+                num += 1
+                num_str = str(num)
+                resp = {"resp_code": RESP_OK, "headers": {"Content-Length": len(num_str),
+                                                          "Content-Type": PLAINTEXT_MIME_TYPE,
+                                                          "Server": "lol"}, "body": num_str.encode()}
+            else:
+                web_file = path.join(WEBSITE_DIR, req_path.strip("/"))
+                print(web_file)
+                resp_code = RESP_OK
+                mime_type = PLAINTEXT_MIME_TYPE
                 try:
-                    mime_type = ext_type_dict[file_ext]
-                except KeyError:
-                    # it's an image?
+                    fd = open(web_file, "rb")
+                    resp_body = fd.read()
+                    fd.close()
+                    file_ext = req_path.rsplit(".", 1)[1]
                     try:
-                        for img_type in image_types:
-                            if img_type == file_ext:
-                                mime_type = f"image/{img_type}"
-                                break
+                        mime_type = ext_type_dict[file_ext]
                     except KeyError:
-                        mime_type = DEFAULT_MIME_TYPE
-            except PermissionError:
-                resp_code = ERROR_403
-                resp_body = resp_code.encode()
-            except FileNotFoundError:
-                resp_code = ERROR_404
-                resp_body = resp_code.encode()
+                        # it's an image?
+                        try:
+                            for img_type in image_types:
+                                if img_type == file_ext:
+                                    mime_type = f"image/{img_type}"
+                                    break
+                        except KeyError:
+                            mime_type = DEFAULT_MIME_TYPE
+                except PermissionError:
+                    resp_code = ERROR_403
+                    resp_body = resp_code.encode()
+                except FileNotFoundError:
+                    resp_code = ERROR_404
+                    resp_body = resp_code.encode()
 
-            resp = {"resp_code": resp_code, "headers": {"Content-Length": len(resp_body),
-                                                        "Content-Type": mime_type,
-                                                        "Server": "lol"}}
-            print(resp)
-            resp["body"] = resp_body
+                resp = {"resp_code": resp_code, "headers": {"Content-Length": len(resp_body),
+                                                            "Content-Type": mime_type,
+                                                            "Server": "lol"}}
+                print(resp)
+                resp["body"] = resp_body
             resp_data = build_http_resp(resp)
             sock.send(resp_data)
             sock.close()
