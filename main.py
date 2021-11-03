@@ -1,10 +1,12 @@
 import socket
 from threading import Thread
 from os import path
+from os import mkdir
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
 
 WEBSITE_DIR = "website"
+UPLOADS_DIR = "yhttp_uploads"
 ERROR_403 = "403 Forbidden"
 ERROR_404 = "404 Not Found"
 RESP_OK = "200 OK"
@@ -34,7 +36,7 @@ def get_http_req(sock):
     return req
 
 
-def parse_http_req(http_req):
+def parse_http_req(http_req, sock):
     """
     Return value is a dict:
     "method" = "GET"/"POST"/etc
@@ -53,6 +55,12 @@ def parse_http_req(http_req):
         header = http_req[i].split(": ", 1)
         headers[header[0]] = header[1]
     req["headers"] = headers
+    for header in req["headers"]:
+        if header == "Content-Length":
+            # we have a body to parse!
+            data = sock.recv(int(req["headers"][header]))
+            req["body"] = data
+            print(req["body"])
     return req
 
 
@@ -68,7 +76,9 @@ def build_http_resp(resp_dict):
     for header in resp_dict["headers"]:
         resp += f"{header}: {resp_dict['headers'][header]}\r\n"
     resp += "\r\n"
-    resp = resp.encode() + resp_dict["body"]
+    resp = resp.encode()
+    if "body" in resp_dict:
+        resp += resp_dict["body"]
     return resp
 
 
@@ -80,7 +90,7 @@ def main():
 
         def serve(sock):
             print("serving")
-            req = parse_http_req(get_http_req(sock))
+            req = parse_http_req(get_http_req(sock), sock)
             print(req)
             req_path = req["path"]
             parsed_url = urlparse(req_path)
@@ -95,6 +105,26 @@ def main():
                 resp = {"resp_code": RESP_OK, "headers": {"Content-Length": len(num_str),
                                                           "Content-Type": PLAINTEXT_MIME_TYPE,
                                                           "Server": "lol"}, "body": num_str.encode()}
+            if parsed_url.path == "/calculate-area":
+                parsed_url = urlparse(req_path)
+                height_str = parse_qs(parsed_url.query)['height'][0]
+                height = int(height_str)
+                width_str = parse_qs(parsed_url.query)['width'][0]
+                width = int(width_str)
+                num_str = str(int((height*width)/2))
+                resp = {"resp_code": RESP_OK, "headers": {"Content-Length": len(num_str),
+                                                          "Content-Type": PLAINTEXT_MIME_TYPE,
+                                                          "Server": "lol"}, "body": num_str.encode()}
+            if parsed_url.path == "/upload":
+                parsed_url = urlparse(req_path)
+                file_name = parse_qs(parsed_url.query)['file-name'][0]
+                if not path.isdir(UPLOADS_DIR):
+                    mkdir(UPLOADS_DIR, 0o666)
+                file_path = path.join(UPLOADS_DIR, file_name)
+                fd = open(file_path, "wb")
+                fd.write(req["body"])
+                fd.close()
+                resp = {"resp_code": RESP_OK, "headers": {"Server": "lol"}}
             else:
                 parsed_url = urlparse(req_path)
                 req_path = parsed_url.path
