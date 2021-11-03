@@ -60,7 +60,7 @@ def parse_http_req(http_req, sock):
             # we have a body to parse!
             data = sock.recv(int(req["headers"][header]))
             req["body"] = data
-            print(req["body"])
+            #print(req["body"])
     return req
 
 
@@ -96,7 +96,7 @@ def main():
             parsed_url = urlparse(req_path)
             if parsed_url.path == "/":
                 req_path = "/index.html"
-            if parsed_url.path == "/calculate-next":
+            elif parsed_url.path == "/calculate-next":
                 parsed_url = urlparse(req_path)
                 num_str = parse_qs(parsed_url.query)['num'][0]
                 num = int(num_str)
@@ -105,7 +105,7 @@ def main():
                 resp = {"resp_code": RESP_OK, "headers": {"Content-Length": len(num_str),
                                                           "Content-Type": PLAINTEXT_MIME_TYPE,
                                                           "Server": "lol"}, "body": num_str.encode()}
-            if parsed_url.path == "/calculate-area":
+            elif parsed_url.path == "/calculate-area":
                 parsed_url = urlparse(req_path)
                 height_str = parse_qs(parsed_url.query)['height'][0]
                 height = int(height_str)
@@ -115,7 +115,7 @@ def main():
                 resp = {"resp_code": RESP_OK, "headers": {"Content-Length": len(num_str),
                                                           "Content-Type": PLAINTEXT_MIME_TYPE,
                                                           "Server": "lol"}, "body": num_str.encode()}
-            if parsed_url.path == "/upload":
+            elif parsed_url.path == "/upload":
                 parsed_url = urlparse(req_path)
                 file_name = parse_qs(parsed_url.query)['file-name'][0]
                 if not path.isdir(UPLOADS_DIR):
@@ -125,6 +125,16 @@ def main():
                 fd.write(req["body"])
                 fd.close()
                 resp = {"resp_code": RESP_OK, "headers": {"Server": "lol"}}
+            elif parsed_url.path == "/image":
+                parsed_url = urlparse(req_path)
+                image_name = parse_qs(parsed_url.query)['image-name'][0]
+                image_path = path.join(UPLOADS_DIR, image_name)
+                fd = open(image_path, "rb")
+                image_data = fd.read()
+                fd.close()
+                resp = {"resp_code": RESP_OK, "headers": {"Content-Length": len(image_data),
+                                                          "Content-Type": PLAINTEXT_MIME_TYPE,
+                                                          "Server": "lol"}, "body": image_data}
             else:
                 parsed_url = urlparse(req_path)
                 req_path = parsed_url.path
