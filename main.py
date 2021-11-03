@@ -83,9 +83,10 @@ def main():
             req = parse_http_req(get_http_req(sock))
             print(req)
             req_path = req["path"]
-            if req_path == "/":
+            parsed_url = urlparse(req_path)
+            if parsed_url.path == "/":
                 req_path = "/index.html"
-            if req_path.startswith("/calculate-next"):
+            if parsed_url.path == "/calculate-next":
                 parsed_url = urlparse(req_path)
                 num_str = parse_qs(parsed_url.query)['num'][0]
                 num = int(num_str)
@@ -95,6 +96,8 @@ def main():
                                                           "Content-Type": PLAINTEXT_MIME_TYPE,
                                                           "Server": "lol"}, "body": num_str.encode()}
             else:
+                parsed_url = urlparse(req_path)
+                req_path = parsed_url.path
                 web_file = path.join(WEBSITE_DIR, req_path.strip("/"))
                 print(web_file)
                 resp_code = RESP_OK
